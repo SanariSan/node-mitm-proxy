@@ -12,26 +12,26 @@ const stopper = async () => {
   }
 };
 
-const getHostPortFromString = function (hostString, defaultPort) {
-  let host = hostString;
-  let port = defaultPort;
-  const regex_hostport = /^([^:]+)(:([0-9]+))?$/;
+// const getHostPortFromString = function (hostString, defaultPort) {
+//   let host = hostString;
+//   let port = defaultPort;
+//   const regex_hostport = /^([^:]+)(:([0-9]+))?$/;
 
-  const result = regex_hostport.exec(hostString);
-  if (result != null) {
-    host = result[1];
-    if (result[2] != null) {
-      port = result[3];
-    }
-  }
+//   const result = regex_hostport.exec(hostString);
+//   if (result != null) {
+//     host = result[1];
+//     if (result[2] != null) {
+//       port = result[3];
+//     }
+//   }
 
-  return [host, port];
-};
+//   return [host, port];
+// };
 
 module.exports = {
   stopper,
   switchStopperValue,
   getStopperValue,
   sleep,
-  getHostPortFromString,
+  // getHostPortFromString,
 };

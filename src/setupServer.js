@@ -2,86 +2,79 @@ const httpProxy = require('http-proxy');
 const http = require('http');
 const url = require('url');
 const net = require('net');
-const { stopper, getHostPortFromString } = require('./util.js');
+const { stopper } = require('./util.js');
 
 function setupServer({ port, host = '127.0.0.1', httpsOnly, whiteListHostsMap }) {
   const server = httpsOnly
     ? http.createServer()
-    : http.createServer(function (req, res) {
-        const urlObj = url.parse(req.url);
-        const target = urlObj.protocol + '//' + urlObj.host;
+    : http.createServer((request, response) => {
+        const fromURL = url.parse(request.url);
+        const target = fromURL.protocol + '//' + fromURL.host;
 
         console.log('Proxy HTTP request for:', target);
 
         const proxy = httpProxy.createProxyServer({});
-        proxy.on('error', function (err, req, res) {
+        proxy.on('error', (err, req, res) => {
           console.log('proxy error', err);
           res.end();
         });
 
-        proxy.web(req, res, { target: target });
+        proxy.web(request, response, { target });
       });
 
-  server.addListener('connect', function (req, clientToProxySocket, bodyhead) {
-    const hostPort = getHostPortFromString(req.url, 443);
-    const hostDomain = hostPort[0];
-    const port = parseInt(hostPort[1]);
+  server.on('connect', (request, clientToProxySocket, head) => {
+    const fromURL = url.parse('http://' + request.url);
 
-    if (whiteListHostsMap !== undefined && !whiteListHostsMap.has(hostDomain)) {
-      console.log('IGNORING HTTPS requests for:', hostDomain, port);
+    if (whiteListHostsMap !== undefined && !whiteListHostsMap.has(fromURL.hostname)) {
+      console.log('IGNORING HTTPS requests for:', fromURL.hostname, fromURL.port);
       return;
     }
 
     console.log('Proxying HTTPS requests for:', hostDomain, port);
 
-    const proxyToClientSocket = new net.Socket();
-    proxyToClientSocket.connect(port, hostDomain, function () {
+    const proxyToServerSocket = net.connect(fromURL.port, fromURL.hostname, () => {
       stopper().then(() => {
-        proxyToClientSocket.write(bodyhead);
+        // send head to the server
+        proxyToServerSocket.write(head);
+        // tell client the tunnel is set up
         clientToProxySocket.write(
-          'HTTP/' + req.httpVersion + ' 200 Connection established\r\n\r\n',
+          'HTTP/' + request.httpVersion + ' 200 Connection established\r\n\r\n',
         );
       });
     });
 
-    proxyToClientSocket.on('data', function (chunk) {
+    // Tunnel from proxy to server
+    proxyToServerSocket.on('data', (chunk) => {
       stopper().then(() => {
         clientToProxySocket.write(chunk);
       });
     });
-
-    proxyToClientSocket.on('end', function () {
+    proxyToServerSocket.on('end', () => {
       stopper().then(() => {
         clientToProxySocket.end();
       });
     });
-
-    proxyToClientSocket.on('error', function () {
+    proxyToServerSocket.on('error', () => {
       stopper().then(() => {
-        clientToProxySocket.write('HTTP/' + req.httpVersion + ' 500 Connection error\r\n\r\n');
+        clientToProxySocket.write('HTTP/' + request.httpVersion + ' 500 Connection error\r\n\r\n');
         clientToProxySocket.end();
       });
     });
 
-    clientToProxySocket.on('data', function (chunk) {
+    // Tunnel from proxy to client
+    clientToProxySocket.on('data', (chunk) => {
       stopper().then(() => {
-        console.time(`${hostDomain}`);
-        proxyToClientSocket.write(chunk);
-        console.timeEnd(`${hostDomain}`);
+        proxyToServerSocket.write(chunk);
       });
     });
-
-    clientToProxySocket.on('end', function () {
+    clientToProxySocket.on('end', () => {
       stopper().then(() => {
-        console.time(`${hostDomain} End`);
-        proxyToClientSocket.end();
-        console.timeEnd(`${hostDomain} End`);
+        proxyToServerSocket.end();
       });
     });
-
-    clientToProxySocket.on('error', function () {
+    clientToProxySocket.on('error', () => {
       stopper().then(() => {
-        proxyToClientSocket.end();
+        proxyToServerSocket.end();
       });
     });
   });
