@@ -3,12 +3,18 @@ const { prompt } = require('inquirer');
 const { setupServer } = require('./setupServer');
 const { switchStopperValue, getStopperValue } = require('./util');
 
+process.on('uncaughtException', (e) => {
+  console.log(e);
+});
+process.on('unhandledRejection', (e) => {
+  console.log(e);
+});
+
 async function index() {
   const hosts = readFileSync('./hosts.txt', 'utf-8').split('\n').filter(Boolean);
   const whiteListHostsMap = new Map(hosts.map((e) => [e, true]));
-  console.log(whiteListHostsMap);
 
-  setupServer({ port: 8888, whiteListHostsMap, httpsOnly: false });
+  setupServer({ port: 8888, httpsOnly: false });
 
   while (1) {
     await prompt({
