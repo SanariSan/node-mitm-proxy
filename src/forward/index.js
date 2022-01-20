@@ -14,7 +14,7 @@ async function index() {
   const whiteListHostsMap = new Map(hosts.map((e) => [e, true]));
 
   setupServer({
-    port: 8888,
+    port: 8889,
     host: '192.168.31.197',
     httpsOnly: false,
     useWhiteList: false,

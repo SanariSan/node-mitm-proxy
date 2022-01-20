@@ -15,7 +15,8 @@ function setupServer({
   silentWhiteList,
 }) {
   if (useWhiteList) console.log(`Whitelist mode enabled, hosts:\n${whiteListHostsMap}`);
-
+  let dropedBeats = 0;
+  let dropBeatsCap = 20;
   // PROXY HTTP
   const server = httpsOnly
     ? http.createServer((req, res) => {
@@ -94,6 +95,17 @@ function setupServer({
     serverSocket.on('data', (chunk) => {
       Throttler.passGate()
         .then(() => {
+          // TODO:
+          // KEEP ONLY FIRST 44 BYTES PACKET, DROP ALL THE OTHERS UNTIL TIME LIMIT
+
+          if (chunk.length === 44) {
+            if (dropedBeats < dropBeatsCap) {
+              return;
+            }
+            console.dir('Passing');
+            dropedBeats = 0;
+          }
+
           clientSocket.write(chunk);
         })
         .then(() => Throttler.closeGate());
