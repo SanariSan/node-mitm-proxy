@@ -1,11 +1,11 @@
 {
   "name": "proxy-node",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.js",
   "license": "MIT",
   "scripts": {
-    "start": "node ./src/forward/index.js",
-    "mon": "nodemon ./src/forward/index.js"
+    "start": "node ./src/forward/app.js",
+    "mon": "nodemon ./src/forward/app.js"
   },
   "dependencies": {
     "axios": "^0.24.0",

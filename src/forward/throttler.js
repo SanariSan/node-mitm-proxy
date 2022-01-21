@@ -2,16 +2,28 @@ const { prompt } = require('inquirer');
 const { sleep, now } = require('./util');
 
 class Throttler {
-  static shouldThrottle = false;
-  static dateEdge = new Date(new Date(2022, 0, 20, 19, 42).getTime() + 3600000 * 3);
-  static timestampEdge = this.dateEdge.getTime();
-  static extraDelay = 60;
+  shouldThrottle;
+  dateEdge;
+  timestampEdge;
+  extraDelay;
+  dropedBeats;
+  dropBeatsCap;
 
-  static switchState() {
+  constructor({ dateEdge, extraDelay }) {
+    this.dateEdge = dateEdge;
+    this.extraDelay = extraDelay - 2; // - internal delay
+
+    this.timestampEdge = dateEdge.getTime();
+    this.shouldThrottle = false;
+    this.dropedBeats = 0;
+    this.dropBeatsCap = 5;
+  }
+
+  switchState() {
     this.shouldThrottle = !this.shouldThrottle;
   }
 
-  static async promptSwitchState() {
+  async promptSwitchState() {
     await prompt({
       message: `Current status for throttling req: ${this.shouldThrottle} | Change?`,
       type: 'confirm',
@@ -22,12 +34,22 @@ class Throttler {
     this.promptSwitchState();
   }
 
-  static passGate() {
+  passGate(chunk) {
     // throttle all requests until this.dateEdge
     // not exactly throttling, but needed exactly this
 
+    // if (chunk !== undefined) {
+    //   if (chunk.length === 44) {
+    //     if (this.dropedBeats++ < this.dropBeatsCap) {
+    //       return Promise.reject();
+    //     }
+    //     console.log(`[!] Passing ${this.dropBeatsCap}-th hb packet`);
+    //     this.dropedBeats = 0;
+    //   }
+    // }
+
     if (this.shouldThrottle) {
-      const sleepFor = this.timestampEdge - new Date(now()) - this.extraDelay;
+      const sleepFor = this.timestampEdge - new Date(now()) + this.extraDelay;
 
       if (sleepFor > 0) {
         console.log(`Sleeping for: ${Math.floor(sleepFor / 1000)}:${sleepFor % 1000}`);
@@ -43,12 +65,9 @@ class Throttler {
     return Promise.resolve();
   }
 
-  static closeGate() {
+  closeGate() {
     if (this.shouldThrottle) {
-      const date = new Date(now());
-      console.log(
-        `Req sent at ${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()}:${date.getUTCMilliseconds()}`,
-      );
+      console.log(`<- Throttled packet sent at`);
     }
   }
 }
