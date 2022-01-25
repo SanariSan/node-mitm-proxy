@@ -1,13 +1,11 @@
 const { prompt } = require('inquirer');
-const { sleep, now } = require('./util');
+const { sleep, now, makeTimeHR } = require('./util');
 
 class Throttler {
   shouldThrottle;
   dateEdge;
   timestampEdge;
   extraDelay;
-  dropedBeats;
-  dropBeatsCap;
 
   constructor({ dateEdge, extraDelay }) {
     this.dateEdge = dateEdge;
@@ -15,8 +13,6 @@ class Throttler {
 
     this.timestampEdge = dateEdge.getTime();
     this.shouldThrottle = false;
-    this.dropedBeats = 0;
-    this.dropBeatsCap = 5;
   }
 
   switchState() {
@@ -38,15 +34,10 @@ class Throttler {
     // throttle all requests until this.dateEdge
     // not exactly throttling, but needed exactly this
 
-    // if (chunk !== undefined) {
-    //   if (chunk.length === 44) {
-    //     if (this.dropedBeats++ < this.dropBeatsCap) {
-    //       return Promise.reject();
-    //     }
-    //     console.log(`[!] Passing ${this.dropBeatsCap}-th hb packet`);
-    //     this.dropedBeats = 0;
-    //   }
-    // }
+    if (chunk !== undefined && chunk.length === 44) {
+      console.log(`[!] Passing hb packet`);
+      return;
+    }
 
     if (this.shouldThrottle) {
       const sleepFor = this.timestampEdge - new Date(now()) + this.extraDelay;
@@ -65,9 +56,9 @@ class Throttler {
     return Promise.resolve();
   }
 
-  closeGate() {
+  closeGate(ms) {
     if (this.shouldThrottle) {
-      console.log(`<- Throttled packet sent at`);
+      console.log(`Throttled packet sent at ${makeTimeHR(ms)}`);
     }
   }
 }

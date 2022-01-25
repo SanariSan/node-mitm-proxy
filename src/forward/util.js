@@ -1,8 +1,16 @@
 const now = () => Date.now();
 
-const monkeyPatchConsole = () => {
+const makeTimeHR = (ms) => {
+  const date = new Date(ms);
+  return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}:${date.getMilliseconds()}`;
+};
+
+const monkeyPatchConsole = ({ disableLogging }) => {
   const log = console.log;
   console.log = function (text, err) {
+    if (disableLogging) {
+      return;
+    }
     const msNow = now();
     const date = new Date(msNow);
 
@@ -25,6 +33,7 @@ const whiteListCheck = (whiteListHostsMap, hostname) =>
 module.exports = {
   sleep,
   whiteListCheck,
+  makeTimeHR,
   now,
   monkeyPatchConsole,
 };

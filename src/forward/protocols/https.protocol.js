@@ -1,5 +1,5 @@
 const net = require('net');
-const { whiteListCheck } = require('../util.js');
+const { whiteListCheck, now } = require('../util.js');
 
 // PROXY HTTPS
 function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, throttler }) {
@@ -13,43 +13,30 @@ function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, 
     console.log(`[+] HTTPS: ${hostname}:${port || '443'}`);
 
     const serverSocket = net.connect(port || 443, hostname, () => {
-      throttler
-        .passGate()
-        .then(() => {
-          // send head to the server
-          serverSocket.write(head);
-          // tell client the tunnel is set up
-          clientSocket.write('HTTP/' + request.httpVersion + ' 200 Connection established\r\n\r\n');
-        })
-        .then(() => throttler.closeGate());
+      throttler.passGate().then(() => {
+        // send head to the server
+        serverSocket.write(head);
+        // tell client the tunnel is set up
+        clientSocket.write('HTTP/' + request.httpVersion + ' 200 Connection established\r\n\r\n');
+      });
     });
 
     // Tunnel from proxy to server
     serverSocket.on('data', (chunk) => {
-      throttler
-        .passGate(chunk)
-        .then(() => {
-          clientSocket.write(chunk);
-        })
-        .then(() => throttler.closeGate())
-        .catch((e) => {});
+      throttler.passGate(chunk).then(() => {
+        clientSocket.write(chunk);
+      });
     });
     serverSocket.on('end', () => {
-      throttler
-        .passGate()
-        .then(() => {
-          clientSocket.end();
-        })
-        .then(() => throttler.closeGate());
+      throttler.passGate().then(() => {
+        clientSocket.end();
+      });
     });
     serverSocket.on('error', () => {
-      throttler
-        .passGate()
-        .then(() => {
-          clientSocket.write('HTTP/' + request.httpVersion + ' 500 Connection error\r\n\r\n');
-          clientSocket.end();
-        })
-        .then(() => throttler.closeGate());
+      throttler.passGate().then(() => {
+        clientSocket.write('HTTP/' + request.httpVersion + ' 500 Connection error\r\n\r\n');
+        clientSocket.end();
+      });
     });
 
     // Tunnel from proxy to client
@@ -58,24 +45,27 @@ function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, 
         .passGate()
         .then(() => {
           serverSocket.write(chunk);
+          return now();
         })
-        .then(() => throttler.closeGate());
+        .then((ms) => throttler.closeGate(ms));
     });
     clientSocket.on('end', () => {
       throttler
         .passGate()
         .then(() => {
           serverSocket.end();
+          return now();
         })
-        .then(() => throttler.closeGate());
+        .then((ms) => throttler.closeGate(ms));
     });
     clientSocket.on('error', () => {
       throttler
         .passGate()
         .then(() => {
           serverSocket.end();
+          return now();
         })
-        .then(() => throttler.closeGate());
+        .then((ms) => throttler.closeGate(ms));
     });
   });
 }

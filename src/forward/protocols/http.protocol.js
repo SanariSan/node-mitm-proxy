@@ -14,10 +14,10 @@ function setupHttp({ server, useWhiteList, whiteListHostsMap, silentWhiteList, h
           const { protocol, port, hostname, pathname } = new URL(request.url);
 
           if (useWhiteList && !whiteListCheck(whiteListHostsMap, hostname) && !silentWhiteList) {
-            console.log(`[-] HTTP: ${hostname}:${port || '80'}/${pathname || ''}`);
+            console.log(`[-] HTTP: ${hostname}:${port || '80'}${pathname || ''}`);
             return;
           }
-          console.log(`[+] HTTP: ${hostname}:${port || '80'}/${pathname || ''}`);
+          console.log(`[+] HTTP: ${hostname}:${port || '80'}${pathname || ''}`);
 
           const proxy = httpProxy.createProxyServer({});
 
