@@ -30,7 +30,7 @@ function setupServer({
     }
   });
 
-  // TODO: add throttler to http and ws
+  // TODO: add throttler to http and ws (or not :)
 
   setupHttp({ server, useWhiteList, whiteListHostsMap, silentWhiteList, httpsOnly });
   setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, throttler });

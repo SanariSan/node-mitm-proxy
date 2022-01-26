@@ -6,10 +6,12 @@ class Throttler {
   dateEdge;
   timestampEdge;
   extraDelay;
+  internalLoggingDelay;
 
   constructor({ dateEdge, extraDelay }) {
     this.dateEdge = dateEdge;
-    this.extraDelay = extraDelay - 2; // - internal delay
+    this.extraDelay = extraDelay;
+    this.internalLoggingDelay = 3;
 
     this.timestampEdge = dateEdge.getTime();
     this.shouldThrottle = false;
@@ -30,21 +32,26 @@ class Throttler {
     this.promptSwitchState();
   }
 
-  passGate(chunk) {
+  async passGate(chunk) {
     // throttle all requests until this.dateEdge
     // not exactly throttling, but needed exactly this
 
-    if (chunk !== undefined && chunk.length === 44) {
-      console.log(`[!] Passing hb packet`);
-      return;
-    }
+    // not needed, seems like hb packets coming from server, so won't throttle those
+    // if (chunk !== undefined && chunk.length === 44) {
+    //   console.log(`[!] Passing hb packet`);
+    //   return Promise.resolve();
+    // }
 
     if (this.shouldThrottle) {
       const sleepFor = this.timestampEdge - new Date(now()) + this.extraDelay;
 
       if (sleepFor > 0) {
         console.log(`Sleeping for: ${Math.floor(sleepFor / 1000)}:${sleepFor % 1000}`);
-        return sleep(sleepFor);
+        await sleep(sleepFor);
+        console.log(
+          `Throttled packet sent at ${makeTimeHR(now() - this.internalLoggingDelay)} +-1ms`,
+        );
+        return;
       }
 
       this.shouldThrottle = false;
@@ -54,12 +61,6 @@ class Throttler {
     }
 
     return Promise.resolve();
-  }
-
-  closeGate(ms) {
-    if (this.shouldThrottle) {
-      console.log(`Throttled packet sent at ${makeTimeHR(ms)}`);
-    }
   }
 }
 

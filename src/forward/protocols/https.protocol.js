@@ -21,51 +21,34 @@ function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, 
       });
     });
 
-    // Tunnel from proxy to server
+    // Tunnel from proxy to server, forwarding data to client
     serverSocket.on('data', (chunk) => {
-      throttler.passGate(chunk).then(() => {
-        clientSocket.write(chunk);
-      });
+      // hb appers here
+      clientSocket.write(chunk);
     });
     serverSocket.on('end', () => {
-      throttler.passGate().then(() => {
-        clientSocket.end();
-      });
+      clientSocket.end();
     });
     serverSocket.on('error', () => {
-      throttler.passGate().then(() => {
-        clientSocket.write('HTTP/' + request.httpVersion + ' 500 Connection error\r\n\r\n');
-        clientSocket.end();
-      });
+      clientSocket.write('HTTP/' + request.httpVersion + ' 500 Connection error\r\n\r\n');
+      clientSocket.end();
     });
 
-    // Tunnel from proxy to client
+    // Tunnel from proxy to client, forwarding data to server
     clientSocket.on('data', (chunk) => {
-      throttler
-        .passGate()
-        .then(() => {
-          serverSocket.write(chunk);
-          return now();
-        })
-        .then((ms) => throttler.closeGate(ms));
+      throttler.passGate(chunk).then(() => {
+        serverSocket.write(chunk);
+      });
     });
-    clientSocket.on('end', () => {
-      throttler
-        .passGate()
-        .then(() => {
-          serverSocket.end();
-          return now();
-        })
-        .then((ms) => throttler.closeGate(ms));
+    clientSocket.on('end', (chunk) => {
+      throttler.passGate(chunk).then(() => {
+        serverSocket.end();
+      });
     });
-    clientSocket.on('error', () => {
-      throttler
-        .passGate()
-        .then(() => {
-          serverSocket.end();
-          return now();
-        })
-        .then((ms) => throttler.closeGate(ms));
+    clientSocket.on('error', (chunk) => {
+      throttler.passGate(chunk).then(() => {
+        serverSocket.end();
+      });
     });
   });
 }
