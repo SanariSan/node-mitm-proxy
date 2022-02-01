@@ -1,6 +1,6 @@
 {
-  "dateEdge": "January 27, 2022 19:00:00",
-  "extraDelay": 0,
+  "dateEdge": "February 01, 2022 23:00:00",
+  "constDelay": 0,
   "host": "192.168.31.197",
   "port": 8888,
   "useWhiteList": false

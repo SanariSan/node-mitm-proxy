@@ -13,7 +13,7 @@ process.on('unhandledRejection', (e) => {
 });
 
 async function index() {
-  const { dateEdge, extraDelay, host, port, useWhiteList } = JSON.parse(
+  const { dateEdge, constDelay, host, port, useWhiteList } = JSON.parse(
     readFileSync('./config.json', 'utf-8'),
   );
 
@@ -25,14 +25,15 @@ async function index() {
 
   const throttler = new Throttler({
     dateEdge: new Date(dateEdge),
-    extraDelay,
+    constDelay,
   });
 
   console.log(`Time limit at: ${throttler.dateEdge}`);
   console.log(`<- Now`);
-  console.log(`Ping delay: ${throttler.extraDelay}`);
+  console.log(`Delay: ${throttler.correctedDelay}`);
 
   throttler.promptSwitchState();
+  throttler.autoCorrectDelay();
 
   setupServer({
     httpsOnly: false,

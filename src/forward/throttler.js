@@ -1,17 +1,24 @@
 const { prompt } = require('inquirer');
 const { sleep, now, makeTimeHR } = require('./util');
+const ping = require('ping');
 
 class Throttler {
   shouldThrottle;
   dateEdge;
   timestampEdge;
-  extraDelay;
+  constDelay;
+  correctedDelay;
+  delayAirbag;
   internalLoggingDelay;
+  // sleepers;
 
-  constructor({ dateEdge, extraDelay }) {
+  constructor({ dateEdge, constDelay }) {
     this.dateEdge = dateEdge;
-    this.extraDelay = extraDelay;
-    this.internalLoggingDelay = 3;
+    this.constDelay = constDelay;
+    this.correctedDelay = constDelay;
+    this.internalLoggingDelay = 2;
+    this.delayAirbag = 3;
+    // this.sleepers = [];
 
     this.timestampEdge = dateEdge.getTime();
     this.shouldThrottle = false;
@@ -32,6 +39,32 @@ class Throttler {
     this.promptSwitchState();
   }
 
+  // async addSleeper(cb) {
+  //   const sleepChain;
+  //   this.sleepers.();
+  // }
+
+  // async autoCorrectSleepers() {}
+
+  async autoCorrectDelay() {
+    let res = await ping.promise.probe(process.env.PING_HOST, {
+      timeout: 5,
+      extra: ['-i', '1', '-c', '2'],
+    });
+
+    const minPing = Math.floor(res.min);
+
+    if (!isNaN(res.min)) {
+      console.log(`Min ping: ${minPing}ms; Airbag: ${this.delayAirbag}; Correcting delay`);
+      this.correctedDelay = Math.round(this.constDelay - minPing + this.delayAirbag);
+      console.log(`Current delay: ${this.correctedDelay}ms`);
+    }
+
+    await sleep(2000);
+    // this.autoCorrectDelay().then(() => this.autoCorrectSleepers());
+    this.autoCorrectDelay();
+  }
+
   async passGate(chunk) {
     // throttle all requests until this.dateEdge
     // not exactly throttling, but needed exactly this
@@ -43,7 +76,7 @@ class Throttler {
     // }
 
     if (this.shouldThrottle) {
-      const sleepFor = this.timestampEdge - new Date(now()) + this.extraDelay;
+      const sleepFor = this.timestampEdge - new Date(now()) + this.correctedDelay;
 
       if (sleepFor > 0) {
         console.log(`Sleeping for: ${Math.floor(sleepFor / 1000)}:${sleepFor % 1000}`);

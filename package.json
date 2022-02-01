@@ -4,14 +4,16 @@
   "main": "app.js",
   "license": "MIT",
   "scripts": {
-    "start": "node ./src/forward/app.js",
-    "mon": "nodemon ./src/forward/app.js"
+    "start": "node -r dotenv/config ./src/forward/app.js",
+    "mon": "nodemon -r dotenv/config ./src/forward/app.js"
   },
   "dependencies": {
     "axios": "^0.24.0",
+    "dotenv": "^15.0.0",
     "http-proxy": "^1.18.1",
     "inquirer": "^8.2.0",
-    "nodemon": "^2.0.15"
+    "nodemon": "^2.0.15",
+    "ping": "^0.4.1"
   },
   "devDependencies": {
     "prettier": "^2.4.1"
