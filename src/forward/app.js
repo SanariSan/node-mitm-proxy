@@ -32,8 +32,7 @@ async function index() {
   console.log(`<- Now`);
   console.log(`Delay: ${throttler.correctedDelay}`);
 
-  throttler.promptSwitchState();
-  throttler.autoCorrectDelay();
+  throttler.promptAutoCorrectDelay().then(() => throttler.promptSwitchThrottlerState());
 
   setupServer({
     httpsOnly: false,

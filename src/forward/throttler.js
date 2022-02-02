@@ -10,43 +10,34 @@ class Throttler {
   correctedDelay;
   delayAirbag;
   internalLoggingDelay;
-  // sleepers;
 
   constructor({ dateEdge, constDelay }) {
     this.dateEdge = dateEdge;
     this.constDelay = constDelay;
     this.correctedDelay = constDelay;
-    this.internalLoggingDelay = 2;
-    this.delayAirbag = 3;
-    // this.sleepers = [];
+    this.internalLoggingDelay = 1;
+    this.delayAirbag = 0;
 
     this.timestampEdge = dateEdge.getTime();
+    this.shouldPing = false;
     this.shouldThrottle = false;
   }
 
-  switchState() {
-    this.shouldThrottle = !this.shouldThrottle;
-  }
-
-  async promptSwitchState() {
+  async promptAutoCorrectDelay() {
     await prompt({
-      message: `Current status for throttling req: ${this.shouldThrottle} | Change?`,
+      message: `Current status for PINGING: off | Change?`,
       type: 'confirm',
       name: 'name',
     });
 
-    this.switchState();
-    this.promptSwitchState();
+    this.shouldPing = true;
+
+    this.autoCorrectDelay();
   }
 
-  // async addSleeper(cb) {
-  //   const sleepChain;
-  //   this.sleepers.();
-  // }
-
-  // async autoCorrectSleepers() {}
-
   async autoCorrectDelay() {
+    if (!this.shouldPing) return;
+
     let res = await ping.promise.probe(process.env.PING_HOST, {
       timeout: 5,
       extra: ['-i', '1', '-c', '2'],
@@ -55,31 +46,31 @@ class Throttler {
     const minPing = Math.floor(res.min);
 
     if (!isNaN(res.min)) {
-      console.log(`Min ping: ${minPing}ms; Airbag: ${this.delayAirbag}; Correcting delay`);
       this.correctedDelay = Math.round(this.constDelay - minPing + this.delayAirbag);
-      console.log(`Current delay: ${this.correctedDelay}ms`);
+      console.log(
+        `Min ping: ${minPing}ms; Airbag: ${this.delayAirbag}; Corrected delay ${this.correctedDelay}`,
+      );
     }
 
-    await sleep(2000);
-    // this.autoCorrectDelay().then(() => this.autoCorrectSleepers());
+    await sleep(3000);
     this.autoCorrectDelay();
   }
 
-  async passGate(chunk) {
-    // throttle all requests until this.dateEdge
-    // not exactly throttling, but needed exactly this
+  async promptSwitchThrottlerState() {
+    await prompt({
+      message: `Current status for throttling req: ${this.shouldThrottle} | Change?`,
+      type: 'confirm',
+      name: 'name',
+    });
 
-    // not needed, seems like hb packets coming from server, so won't throttle those
-    // if (chunk !== undefined && chunk.length === 44) {
-    //   console.log(`[!] Passing hb packet`);
-    //   return Promise.resolve();
-    // }
+    this.shouldThrottle = true;
+  }
 
+  async passGate() {
     if (this.shouldThrottle) {
       const sleepFor = this.timestampEdge - new Date(now()) + this.correctedDelay;
 
       if (sleepFor > 0) {
-        console.log(`Sleeping for: ${Math.floor(sleepFor / 1000)}:${sleepFor % 1000}`);
         await sleep(sleepFor);
         console.log(
           `Throttled packet sent at ${makeTimeHR(now() - this.internalLoggingDelay)} +-1ms`,
@@ -87,10 +78,10 @@ class Throttler {
         return;
       }
 
+      this.shouldPing = false;
       this.shouldThrottle = false;
-      console.log(
-        `Current status for throttling dropped to default, time limit reached, status: ${this.shouldThrottle}`,
-      );
+
+      console.log(`Current status for throttling and pinging is OFF, time reached`);
     }
 
     return Promise.resolve();
