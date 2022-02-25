@@ -2,6 +2,7 @@ const httpProxy = require('http-proxy');
 const { whiteListCheck } = require('../util.js');
 
 // PROXY HTTP
+// Here you can read, modify, pause, drop or forward requests
 function setupHttp({ server, useWhiteList, whiteListHostsMap, silentWhiteList, httpsOnly }) {
   server.on(
     'request',
