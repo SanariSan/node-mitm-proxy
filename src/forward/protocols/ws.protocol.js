@@ -2,6 +2,7 @@ const httpProxy = require('http-proxy');
 const { whiteListCheck } = require('../util.js');
 
 // PROXY WS
+// Here you can pause, drop or forward requests
 function setupWs({ server, useWhiteList, whiteListHostsMap, silentWhiteList }) {
   server.on('upgrade', function (request, socket, head) {
     const { port, hostname } = new URL(request.url);

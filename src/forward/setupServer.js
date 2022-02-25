@@ -8,7 +8,6 @@ function setupServer({
   useWhiteList,
   whiteListHostsMap,
   silentWhiteList,
-  throttler,
 }) {
   if (useWhiteList)
     console.log(
@@ -30,10 +29,8 @@ function setupServer({
     }
   });
 
-  // TODO: add throttler to http and ws (or not :)
-
   setupHttp({ server, useWhiteList, whiteListHostsMap, silentWhiteList, httpsOnly });
-  setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, throttler });
+  setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList });
   setupWs({ server, useWhiteList, whiteListHostsMap, silentWhiteList });
 
   server.listen(port, host, () => {

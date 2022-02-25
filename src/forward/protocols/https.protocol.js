@@ -1,8 +1,9 @@
 const net = require('net');
-const { whiteListCheck, now } = require('../util.js');
+const { whiteListCheck } = require('../util.js');
 
 // PROXY HTTPS
-function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, throttler }) {
+// Here you can pause, drop or forward requests
+function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList }) {
   server.on('connect', (request, clientSocket, head) => {
     const { port, hostname } = new URL(`http://${request.url}`);
 
@@ -13,17 +14,14 @@ function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, 
     console.log(`[+] HTTPS: ${hostname}:${port || '443'}`);
 
     const serverSocket = net.connect(port || 443, hostname, () => {
-      throttler.passGate().then(() => {
-        // send head to the server
-        serverSocket.write(head);
-        // tell client the tunnel is set up
-        clientSocket.write('HTTP/' + request.httpVersion + ' 200 Connection established\r\n\r\n');
-      });
+      // send head to the server
+      serverSocket.write(head);
+      // tell client the tunnel is set up
+      clientSocket.write('HTTP/' + request.httpVersion + ' 200 Connection established\r\n\r\n');
     });
 
     // Tunnel from proxy to server, forwarding data to client
     serverSocket.on('data', (chunk) => {
-      // hb appers here
       clientSocket.write(chunk);
     });
     serverSocket.on('end', () => {
@@ -36,19 +34,13 @@ function setupHttps({ server, useWhiteList, whiteListHostsMap, silentWhiteList, 
 
     // Tunnel from proxy to client, forwarding data to server
     clientSocket.on('data', (chunk) => {
-      throttler.passGate(chunk).then(() => {
-        serverSocket.write(chunk);
-      });
+      serverSocket.write(chunk);
     });
     clientSocket.on('end', (chunk) => {
-      throttler.passGate(chunk).then(() => {
-        serverSocket.end();
-      });
+      serverSocket.end();
     });
     clientSocket.on('error', (chunk) => {
-      throttler.passGate(chunk).then(() => {
-        serverSocket.end();
-      });
+      serverSocket.end();
     });
   });
 }
